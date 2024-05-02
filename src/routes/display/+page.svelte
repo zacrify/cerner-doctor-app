@@ -190,11 +190,6 @@
                 <input class="shadow appearance-none border rounded w-200 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="number" id='rr' bind:value={rr} step='1' required>
                 <button class="btn variant-filled" type="submit">{loading?'Submitting...':'Submit'}</button>
               </form>
-             {#await fetchVSWithToken() }
-                <div></div>
-             {:then } 
-                
-             {/await} 
             <div class="table-container">  
             <table class="table table-hover">
                 <thead>

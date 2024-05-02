@@ -3,7 +3,10 @@
 
 //###########
 
-// export let data;
+export let data;
+
+
+// addAuth();
 </script>
 
 
@@ -14,8 +17,14 @@
 		<h1 class="h1">CERNER</h1>
 		<p>Patients list</p>
 		<div>
-			<!-- <h1>{data.title}</h1>
-			<div>{@html data.description}</div> -->
+			<h1>{data.url}</h1>
+			<!-- <button on:click={addAuth} class="btn variant-filled">Add Auth</button> -->
+			<ul>
+				{#each data.post as record,i}
+					<li>{i+1}. token:{record.access_token} fhir:{record.fhir_endpoint} code:{record.code} launch:{record.launch}</li>
+				{/each}
+			</ul>
+
 			<!-- <pre>{JSON.stringify(data)}</pre> -->
 		</div>
 
