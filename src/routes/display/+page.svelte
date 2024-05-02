@@ -190,29 +190,35 @@
                 <input class="shadow appearance-none border rounded w-200 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" type="number" id='rr' bind:value={rr} step='1' required>
                 <button class="btn variant-filled" type="submit">{loading?'Submitting...':'Submit'}</button>
               </form>
-            <table class="table-auto border-collapse border border-white">
+             {#await fetchVSWithToken() }
+                <div></div>
+             {:then } 
+                
+             {/await} 
+            <div class="table-container">  
+            <table class="table table-hover">
                 <thead>
-                    <tr class="border-b border-white">
-                        <th class="border-r border-white">#</th>
-                        <th class="border-r border-white">Date</th>
-                        <th class="border-r border-white">Code</th>
+                    <tr>
+                        <th>#</th>
+                        <th>Date</th>
+                        <th>Code</th>
                         <th>Value</th>
-                        <th></th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     {#each vsData as entry, i}
-                        <tr class="border-b border-white">
-                            <td class="border-r border-white">{i}</td>
-                            <td class="border-r border-white">{formatDateTime(entry.resource?.effectiveDateTime)}</td>
-                            <td class="border-r border-white">{entry.resource.code.text}</td>
+                        <tr>
+                            <td>{i}</td>
+                            <td>{formatDateTime(entry.resource?.effectiveDateTime)}</td>
+                            <td>{entry.resource.code.text}</td>
                             <td>{entry.resource?.valueQuantity?.value || `${entry.resource?.component?.[0]?.valueQuantity?.value}/${entry.resource?.component?.[1]?.valueQuantity?.value}`}</td>
                             <td><button id={entry.resource.id} class="btn variant-filled" on:click={handleDeleteObs}>Delete</button></td>
                         </tr>
                     {/each}
                 </tbody>
             </table>
-            
+            </div>
 
 			<!-- {sourceData.vitalsign.all.map((item: any) => (
                 <div>

@@ -224,12 +224,13 @@ export async function postObservationPR(fhir_endpoint: string,token: string, pat
                 "text": "Vital Signs"
             }
         ],
+
         "code": {
             "coding": [
                 {
                     "system": "http://loinc.org",
-                    "code": "8867-4",
-                    "display": "Heart rate"
+                    "code": "69000-8",
+                    "display": "Heart rate --sitting"
                 }
             ],
             "text": "Heart rate"
