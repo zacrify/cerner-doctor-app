@@ -37,6 +37,7 @@
     "@prisma/client": "^5.13.0",
     "@types/fhir": "^0.0.41",
     "axios": "^1.6.8",
+    "parse-nested-form-data": "^1.0.0",
     "pkce-challenge": "^4.1.0",
     "pocketbase": "^0.21.2"
   }

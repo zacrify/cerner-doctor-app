@@ -1,8 +1,8 @@
-<script lang="ts">
+ <!-- <script lang="ts">
 	import axios from 'axios';
 	import { onMount } from 'svelte';
     import { formatDateTime, postObservationTemp, postObservationBP, postObservationPR, postObservationRR } from '../../config';
-
+	import prisma from '$lib/index';
 	onMount(async () => {
 		await fetchVSWithToken();
 	});
@@ -22,21 +22,39 @@
     let loading: boolean = false;
 	async function fetchVSWithToken() {
 		try {
-			const response = await axios.get(`${localStorage.getItem('fhir_endpoint')}/Observation`, {
-				params: {
-					// Add your query parameters here
-					patient: `${localStorage.getItem('patient')}`,
-					category: 'vital-signs'
+			const auth = prisma.auth.findUnique({
+				where: {
+					id: 1
 				},
+				select: {
+					access_token: true,
+					fhir_endpoint: true,
+					patient_id: true
+				}
+			});
+			const response = await fetch(`${auth.fhir_endpoint}/Observation?patient=${auth.patient_id}&category=vital-signs`, {
+				method: 'GET',
 				headers: {
-					Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+					Authorization: `Bearer ${auth.access_token}`,
 					Accept: 'application/json'
 				}
 			});
-			console.log('VitalSign Data:', response.data);
-			const filteredData = response.data.entry.filter(
-				(entry) => entry.resource.resourceType !== 'OperationOutcome'
-			);
+			const filteredData = await response.json();
+			// const response = await axios.get(`${localStorage.getItem('fhir_endpoint')}/Observation`, {
+			// 	params: {
+			// 		// Add your query parameters here
+			// 		patient: `${localStorage.getItem('patient')}`,
+			// 		category: 'vital-signs'
+			// 	},
+			// 	headers: {
+			// 		Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+			// 		Accept: 'application/json'
+			// 	}
+			// });
+			// console.log('VitalSign Data:', response.data);
+			// const filteredData = response.data.entry.filter(
+			// 	(entry) => entry.resource.resourceType !== 'OperationOutcome'
+			// );
 			vsData = filteredData;
 			console.log('VitalSign Data:', filteredData);
 			// localStorage.setItem('responseVitalSign', JSON.stringify(filteredData));
@@ -214,17 +232,48 @@
                 </tbody>
             </table>
             </div>
-
-			<!-- {sourceData.vitalsign.all.map((item: any) => (
-                <div>
-                    <p>{item.DateTime}</p>
-                    <p>{item.BP}</p>
-                    <p>{item.Temperature}</p>
-                    <p>{item.Weight}</p>
-                    <p>{item.Pulse}</p>
-                </div>
-            ))
-            } -->
 		</div>
 	</div>
-</div>
+</div> 
+<h1>Display</h1>  -->
+
+<script lang="ts">
+	import type { Observation, Bundle, BundleEntry, ListEntry } from 'fhir/r4.js';
+
+	// export let vsData: Observation[] = data.vsData.entry ;
+	export let data;
+	// let x:Bundle<Observation> = data.vsData;
+	// let observations: BundleEntry<Observation>[] = x.entry;	
+	// const observations = (x: Bundle<Observation>): BundleEntry<Observation>[] => {
+	// 	if (!x.entry) {return [];};
+	// 	const results = x.entry?.filter((entry)=>entry.resource?.resourceType === 'Observation') as BundleEntry<Observation>[];
+	// 	const nonPanelResults = results.filter(entry=>entry?.resource?.hasMember == undefined)
+   	// 	 return nonPanelResults
+	// };
+
+	// let observations: Bundle = data.vsData;
+
+	// let observations: Observation[] = data.vsData.entry.resource;
+	let observations: Observation[] = data.vsData.entry;
+
+</script>
+<!-- <ul>
+	{#each observations as observation, i}
+		{#if observation.component}
+		<li>{i + 1}. {observation.effectiveDateTime}: {observation.code.text} {observation.component?.[0]?.valueQuantity?.value}/{observation.component?.[1]?.valueQuantity?.value}</li>
+		{:else}
+	 	 <li>{i + 1}. {observation.effectiveDateTime}: {observation.code.text} {observation.valueQuantity?.value}</li>
+		 {/if}
+	{/each}
+</ul> -->
+<ul>
+	{#each observations as observation, i}
+		{#if observation.resource.component}
+		<li>{i + 1}. {observation.resource.effectiveDateTime}: {observation.resource.code.text} {observation.resource.component?.[0]?.valueQuantity?.value}/{observation.resource.component?.[1]?.valueQuantity?.value}</li>
+		{:else}
+	 	 <li>{i + 1}. {observation.resource.effectiveDateTime}: {observation.resource.code.text} {observation.resource.valueQuantity?.value}</li>
+		 {/if}
+	{/each}
+  </ul>
+
+  

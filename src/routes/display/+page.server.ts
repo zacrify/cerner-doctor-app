@@ -1,7 +1,6 @@
-
+import type { PageServerLoad } from "./$types";
 import prisma from '$lib/index';
 import { redirect } from "@sveltejs/kit";
-import type { PageServerLoad } from './auth/$types';
 async function fetchVSWithToken() {
     try {
         const auth = await prisma.auth.findUnique({
@@ -14,10 +13,10 @@ async function fetchVSWithToken() {
                 patient_id: true
             }
         });
-        const response = await fetch(`${auth?.fhir_endpoint}/Observation?patient=${auth.patient_id}&category=vital-signs`, {
+        const response = await fetch(`${auth.fhir_endpoint}/Observation?patient=${auth.patient_id}&category=vital-signs`, {
             method: 'GET',
             headers: {
-                Authorization: `Bearer ${auth?.access_token}`,
+                Authorization: `Bearer ${auth.access_token}`,
                 Accept: 'application/json'
             }
         });
@@ -32,8 +31,8 @@ async function fetchVSWithToken() {
 
 export const load: PageServerLoad = async ( { params } ) => {
     const response = await fetchVSWithToken();
-    const vsData = await response?.json();
-    if (!response?.ok) {
+    const vsData = await response.json();
+    if (response.status !== 200) {
         // throw new Error('Error fetching vital signs: Please reopen from cerner site'); 
         redirect(302, '/refreshtoken');
     } else {

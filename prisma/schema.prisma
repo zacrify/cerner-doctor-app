@@ -14,13 +14,21 @@ model Auth {
   id        Int      @id @default(autoincrement())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
+  code_challenge      String?
+  code_verifier       String?
   fhir_endpoint       String?
   auth_url            String?
   token_url           String?
   launch              String?
   code                String?
   access_token        String?
+  access_token_expiredAt Int?
   refresh_token       String?
   need_patient_banner Boolean? @default(false)
+  patient_id          String?
+  user_id             String?
+  encounter_id        String?
+  Name                String?
+  DOB                 DateTime?
+  Sex                 String?
 }

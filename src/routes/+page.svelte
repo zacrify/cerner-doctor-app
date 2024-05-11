@@ -1,12 +1,11 @@
 <!-- YOU CAN DELETE EVERYTHING IN THIS PAGE -->
 <script lang="ts">
 
-//###########
+import type { Observation, Bundle, BundleEntry, ListEntry } from 'fhir/r4.js';
 
+// export let vsData: Observation[] = data.vsData.entry ;
 export let data;
-
-
-// addAuth();
+let observations: Observation[] = data.vsData.entry;
 </script>
 
 
@@ -17,17 +16,18 @@ export let data;
 		<h1 class="h1">CERNER</h1>
 		<p>Patients list</p>
 		<div>
-			<h1>{data.url}</h1>
-			<!-- <button on:click={addAuth} class="btn variant-filled">Add Auth</button> -->
 			<ul>
-				{#each data.post as record,i}
-					<li>{i+1}. token:{record.access_token} fhir:{record.fhir_endpoint} code:{record.code} launch:{record.launch}</li>
+				{#each observations as observation, i}
+					{#if observation.resource.component}
+					<li>{i + 1}. {observation.resource.effectiveDateTime}: {observation.resource.code.text} {observation.resource.component?.[0]?.valueQuantity?.value}/{observation.resource.component?.[1]?.valueQuantity?.value}</li>
+					{:else}
+					  <li>{i + 1}. {observation.resource.effectiveDateTime}: {observation.resource.code.text} {observation.resource.valueQuantity?.value}</li>
+					 {/if}
 				{/each}
-			</ul>
-
-			<!-- <pre>{JSON.stringify(data)}</pre> -->
+			  </ul>
 		</div>
 
 	</div>
 </div>
+
 
