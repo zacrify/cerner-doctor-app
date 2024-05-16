@@ -249,9 +249,9 @@ export async function postObservationPR(fhir_endpoint: string,token: string, pat
     await postObservation(fhir_endpoint,token, patientid, observation);
 }
 
-async function postObservation(fhir_endpoint: string,token: string, patientid: string, observation: any) {
+async function postObservation(fhir_endpoint: string,token: string, observation: any) {
     // Axios POST request
-    try {
+    // try {
         const response = await axios.post(`${fhir_endpoint}/Observation`, observation, {
             headers: {
                 'Authorization': 'Bearer ' + token,
@@ -259,8 +259,10 @@ async function postObservation(fhir_endpoint: string,token: string, patientid: s
                 
             }
         });
-        console.log('Observation posted successfully:', response.data);
-    } catch (error) {
-        console.error('Error posting Observation:', error);
-    }
+        
+        console.log('Observation posted successfully:', response.data.issue[0].diagnostics);
+    // } catch (error) {
+    //     console.error('Error posting Observation:', error);
+    //     console.log('error:', response.error)
+    // }
 }

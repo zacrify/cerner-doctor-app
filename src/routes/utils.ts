@@ -156,7 +156,7 @@ export async function exchangeAuthorizationCodeForToken(
 			where: { id: record_Id },
 			data: {
 				access_token: responseData.access_token,
-				access_token_expiredAt: tokenGeneratedAt + 15,
+				access_token_expiredAt: tokenGeneratedAt + responseData.expires_in,
 				// + responseData.expires_in,
 				need_patient_banner: responseData.need_patient_banner,
 				patient_id: responseData.patient,
@@ -204,7 +204,7 @@ export async function refreshNewToken(patient_id) {
 				where: { patient_id: patient_id },
 				data: {
 					access_token: responseData.access_token,
-					access_token_expiredAt: tokenGeneratedAt + 15,
+					access_token_expiredAt: tokenGeneratedAt + responseData.expires_in,
 					// + responseData.expires_in,
 					patient_id: responseData.patient
 				} as Auth

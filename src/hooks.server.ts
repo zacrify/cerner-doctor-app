@@ -33,7 +33,7 @@ import { parseFormData } from 'parse-nested-form-data';
 // }
 
 const parseForm: Handle = async ({ event, resolve }) => {
-    console.log('parseForm run');
+    // console.log('parseForm run');
     // if (event.request.method === 'GET') {
     //     const formData = await event.request.formData();
     //     return resolve(event);

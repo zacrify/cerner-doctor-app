@@ -3,7 +3,6 @@ import prisma from '$lib/index';
 import { redirect } from "@sveltejs/kit";
 import type { PageServerLoad } from './auth/$types';
 import type { Actions } from './$types';
-import { postObservationTemp } from '../config';
 
 async function fetchVSWithToken(patient_id: string) {
     try {
@@ -24,9 +23,6 @@ async function fetchVSWithToken(patient_id: string) {
                 Accept: 'application/json'
             }
         });
-        // const filteredData = await response.json();
-        // console.log('response',response);
-        // return filteredData;
         return response;
     } catch (error) {
         console.error('Error fetching vital signs:', error);
@@ -40,6 +36,7 @@ export const load: PageServerLoad = async ( { cookies } ) => {
     const vsData = await response?.json();
     if (!response.ok) {
         // throw new Error('Error fetching vital signs: Please reopen from cerner site'); 
+        console.log('resoise', response);
         redirect(302, '/refreshtoken');
     } else {
         // console.log('vsData:',vsData)
@@ -50,8 +47,8 @@ export const load: PageServerLoad = async ( { cookies } ) => {
 
 }
 
-function constructObservationData(patientid: string, temperature: number) {
-    const observation = {
+async function createObservation(fhirServerUrl:string, accessToken:string, patientId:string, temp:number) {
+    const observationData = {
         "resourceType": "Observation",
         "status": "final",
         "category": [
@@ -77,18 +74,40 @@ function constructObservationData(patientid: string, temperature: number) {
             "text": "Temperature Oral"
         },
         "subject": {
-            "reference": `Patient/${patientid}` // Replace with the patient reference
+            "reference": `Patient/${patientId}`
         },
         "effectiveDateTime": new Date().toISOString(), // Current date and time
         "valueQuantity": {
-            "value": temperature,
+            "value": temp,
             "unit": "degC",
             "system": "http://unitsofmeasure.org",
             "code": "Cel"
         }
     };
-    return observation;
+    console.log('observationData:',JSON.stringify(observationData));
+    try {
+        const response = await fetch(`${fhirServerUrl}/Observation`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(observationData)
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to create observation');
+        }
+
+        return;
+    } catch (error) {
+        console.error('Error creating observation:', error);
+        throw error;
+    }
 }
+
+
 
 export const actions: Actions = {
 	selectpatient: async ({ cookies, request }) => {
@@ -112,19 +131,9 @@ export const actions: Actions = {
         });
         const data = await request.formData();
         const temp = data.get('temp');
-        const observation = constructObservationData(auth[0].patient_id, temp);
-        console.log('observation:',JSON.stringify(observation));
-        const response = await fetch(`${auth[0].fhir_endpoint}/Observation`, {
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${auth[0].access_token}`,
-                Accept: 'application/json',
-                // 'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(observation)
-        });
-        console.log('response:',response);
-        // await postObservationTemp(auth[0].fhir_endpoint, auth[0].access_token, auth[0].patient_id, temp);
+        const tempNumber = parseFloat(temp);
+        console.log(typeof temp);
+        await createObservation(auth[0].fhir_endpoint, auth[0].access_token, auth[0].patient_id, tempNumber);
         return { success: true };
     }
 };
