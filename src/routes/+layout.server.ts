@@ -110,11 +110,12 @@ async function updateAuth(url) {
 // 	}
 // }
 
-export async function load({ url }) {
+export async function load({ url,locals,cookies }) {
 	if (url.pathname === '/refreshtoken' || url.pathname === '/auth') {
 		return;
 	}
-	const data = await getExpiredToken();
+	const patient_id = cookies.get('patient_id');
+	const data = await getExpiredToken(patient_id);
 	console.log( `now: ${data.now} expiredAt: ${data.access_token_expiredAt}`);
 
 	if (data.now > data.access_token_expiredAt) {
@@ -122,11 +123,23 @@ export async function load({ url }) {
 		redirect(302, '/refreshtoken');
 	} else {
 		console.log('valid token');
-		const needBanner = await getNeedBanner();
+		const needBanner = await getNeedBanner(patient_id);
+		const patients = await prisma.auth.findMany({
+			select: {
+				Name: true,
+				DOB: true,
+				Sex: true,
+				patient_id: true
+			} 
+		});
 		return {
-			patient: await fetchPatient(),
-			needBanner: needBanner
+			patient: `${patients[0].Name} DOB: ${patients[0].DOB} Gender:${patients[0].Sex}`,
+			// patient: await fetchPatient(patient_id),
+			needBanner: needBanner,
+			patient_id: patient_id,
+			patients: patients
 		};
 	}
 
 }
+

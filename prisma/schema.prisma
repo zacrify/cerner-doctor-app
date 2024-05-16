@@ -29,6 +29,6 @@ model Auth {
   user_id             String?
   encounter_id        String?
   Name                String?
-  DOB                 DateTime?
+  DOB                 String?
   Sex                 String?
 }

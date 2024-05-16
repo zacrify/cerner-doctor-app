@@ -23,24 +23,27 @@ import { parseFormData } from 'parse-nested-form-data';
 //     });
 // }
 
-const perFormance: Handle = async ({ event, resolve }) => {
-    let start = performance.now();
-    const response = await resolve(event);
-    let end = performance.now();
-    let responsTime = end - start;
-    console.log('responsTime:',responsTime.toFixed(2));
-    return response;
-}
+// const perFormance: Handle = async ({ event, resolve }) => {
+//     let start = performance.now();
+//     const response = await resolve(event);
+//     let end = performance.now();
+//     let responsTime = end - start;
+//     console.log('responsTime:',responsTime.toFixed(2));
+//     return response;
+// }
 
 const parseForm: Handle = async ({ event, resolve }) => {
     console.log('parseForm run');
-    if (event.request.method === 'POST') {
-        const formData = await event.request.formData();
-        const data = parseFormData(formData);
-        event.locals.formData = data;
-        console.log('+hook handle bf Parse:',formData);
-        console.log('+hook handle after Parse:',data);
-    }
+    // if (event.request.method === 'GET') {
+    //     const formData = await event.request.formData();
+    //     return resolve(event);
+    //     const data = parseFormData(formData);
+    //     event.locals.formData = data;
+    //     console.log('+hook handle bf Parse:',formData);
+    //     console.log('+hook handle after Parse:',data);
+    //     // event.cookies.set('patient_id', data.patient, { path: '/' });
+
+    // }
     return resolve(event);
 }
 
@@ -49,7 +52,20 @@ export const handleError: HandleServerError = async ({ error, event }) => {
     return { message: `${error} Pleae reopen from cerner again`};
 }
 
-export const handle = sequence(perFormance,parseForm);
+// const currentPatient: Handle = async ({ request, resolve }) => {
+//     // Get the response by calling the resolve function
+//     const response = await resolve(request);
+  
+//     // Get the value from the response body
+//     const value = response.body.patient.id;
+  
+//     // Set a cookie
+//     response.headers['set-cookie'] = `currentPatient=${value}; HttpOnly; Path=/;`;
+  
+//     return response;
+//   }
+
+export const handle = sequence(parseForm);
 
 // export const handleFetch: HandleFetch = async ({ request, fetch }) => {
 //     if (request.url.startsWith('http')) {

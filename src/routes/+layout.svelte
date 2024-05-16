@@ -16,7 +16,7 @@
 	let need_patient_banner: boolean = false;
 	
 
-
+	let form;
 	export let data;
 
 	need_patient_banner = data.needBanner;
@@ -101,7 +101,15 @@
 
 	<div class="w-full">
 		{#if need_patient_banner}
-			<AppBar>{data.patient}</AppBar>
+			<AppBar>
+				<form method='POST' bind:this={form} action="?/selectpatient">
+					<select class="select" size="1" name="patient" bind:value={data.patient_id} on:change={() => form.requestSubmit()}>
+						{#each data.patients as patient (patient.patient_id)}
+						  <option value={patient.patient_id}>{patient.Name} DOB:{patient.DOB} Gender:{patient.Sex}</option>
+						{/each}		
+					</select>		
+				</form>
+			</AppBar>
 		{/if}
 		<slot />
 	</div>

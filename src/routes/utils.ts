@@ -5,22 +5,13 @@ import { calculateAge } from '../config';
 import { redirect } from '@sveltejs/kit';
 import { access } from 'fs';
 
-export const generateCodeChallenge = async () => {
+export const generateCodeChallenge = async (recordID: number) => {
 	const challenge = await pkceChallenge();
-	const authExist = await checkAuthIDExist(1);
-	if (!authExist) {
-		await prisma.auth.create({
-			data: {
-				id: 1,
-				code_verifier: challenge.code_verifier
-			}
-		});
-	} else {
-		await prisma.auth.update({
-			where: { id: 1 },
-			data: { code_verifier: challenge.code_verifier }
-		});
-	}
+	await prisma.auth.update({
+		where: { id: recordID },
+		data: { code_verifier: challenge.code_verifier }
+	});
+
 	return challenge.code_challenge;
 };
 
@@ -33,22 +24,15 @@ export async function checkAuthIDExist(myid: number) {
 	return exist;
 }
 
-export async function createAuthTokenUrl(AuthUrl: string, TokenUrl: string) {
-	const authExist = await checkAuthIDExist(1);
-	if (!authExist) {
-		await prisma.auth.create({
-			data: {
-				id: 1,
-				auth_url: AuthUrl,
-				token_url: TokenUrl
-			} as Auth
-		});
-	} else {
-		await prisma.auth.update({
-			where: { id: 1 },
-			data: { auth_url: AuthUrl, token_url: TokenUrl } as Auth
-		});
-	}
+export async function createAuthTokenUrl(AuthUrl: string, TokenUrl: string, recordID: number) {
+	// const authExist = await checkAuthIDExist(1);
+	await prisma.auth.update({
+		where: { id: recordID },
+		data: {
+			auth_url: AuthUrl,
+			token_url: TokenUrl
+		} as Auth
+	});
 }
 
 export const generatedRedirectUrl = (
@@ -76,25 +60,14 @@ export const generatedRedirectUrl = (
 	return authorizationUrl.href;
 };
 
-export async function createCode(code: string) {
-	const authExist = await checkAuthIDExist(1);
-	console.log('authExist&code:', authExist);
-	if (!authExist) {
-		await prisma.auth.create({
-			data: {
-				id: 1,
-				code: code
-			} as Auth
-		});
-	} else {
-		await prisma.auth.update({
-			where: { id: 1 },
-			data: { code: code } as Auth
-		});
-	}
+export async function createCode(code: string, record_Id: number) {
+	await prisma.auth.update({
+		where: { id: record_Id },
+		data: { code: code } as Auth
+	});
 }
 
-export async function getAuthTokenUrl(fhir_endpoint: string) {
+export async function getAuthTokenUrl(fhir_endpoint: string, recordId: number) {
 	//todo get auth url & token url from fhir wellknown
 	const WELLKNOWN = '/.well-known/smart-configuration';
 
@@ -103,20 +76,24 @@ export async function getAuthTokenUrl(fhir_endpoint: string) {
 	const wellKnownUrl = fhir_endpoint + WELLKNOWN;
 	const wellKnownResponse = await fetch(wellKnownUrl);
 	const wellKnownJson = await wellKnownResponse.json();
-	await createAuthTokenUrl(wellKnownJson.authorization_endpoint, wellKnownJson.token_endpoint);
+	await createAuthTokenUrl(
+		wellKnownJson.authorization_endpoint,
+		wellKnownJson.token_endpoint,
+		recordId
+	);
 	// const data = await prisma.auth.findUnique({ where: { id: 1 }, select: { auth_url: true }});
 	// console.log('auth-url updated:',data?.auth_url)
 }
 
-export async function getAuthRedirect() {
+export async function getAuthRedirect(recordID: number) {
 	//todo redirect to auth url
 	const CLIENT_ID = '0db43914-bcb0-478a-91b5-19f90cc056a9';
 	const SCOPE =
 		'openid fhirUser launch patient/Patient.read user/Observation.read user/Observation.write offline_access';
 	const Redirect_URI = 'http://localhost:5173/auth';
-	const auth = await prisma.auth.findUnique({ where: { id: 1 } });
+	const auth = await prisma.auth.findUnique({ where: { id: recordID } });
 
-	const codeChallenge = await generateCodeChallenge();
+	const codeChallenge = await generateCodeChallenge(recordID);
 	const redirectUrl = generatedRedirectUrl(
 		auth?.auth_url,
 		auth?.fhir_endpoint,
@@ -132,29 +109,20 @@ export async function getAuthRedirect() {
 export async function createFhirEndpoint(iss: string, launch: string) {
 	const authExist = await checkAuthIDExist(1);
 	console.log('authExist&iss:', authExist);
-	if (!authExist) {
-		await prisma.auth.create({
-			data: {
-				id: 1,
-				fhir_endpoint: iss,
-				launch: launch
-			} as Auth
-		});
-	} else {
-		await prisma.auth.update({
-			where: { id: 1 },
-			data: {
-				fhir_endpoint: iss,
-				launch: launch
-			} as Auth
-		});
-	}
+	const createRecord = await prisma.auth.create({
+		data: {
+			fhir_endpoint: iss,
+			launch: launch
+		} as Auth
+	});
+	return createRecord.id;
 }
 
 export async function exchangeAuthorizationCodeForToken(
 	code: string,
 	codeVerifier: string,
-	token_endpoint: string
+	token_endpoint: string,
+	record_Id: number
 ) {
 	const CLIENT_ID = '0db43914-bcb0-478a-91b5-19f90cc056a9';
 	const Redirect_URI = 'http://localhost:5173/auth';
@@ -185,7 +153,7 @@ export async function exchangeAuthorizationCodeForToken(
 
 		const responseData = await response.json();
 		await prisma.auth.update({
-			where: { id: 1 },
+			where: { id: record_Id },
 			data: {
 				access_token: responseData.access_token,
 				access_token_expiredAt: tokenGeneratedAt + 15,
@@ -197,19 +165,19 @@ export async function exchangeAuthorizationCodeForToken(
 				encounter_id: responseData.encounter
 			} as Auth
 		});
-		
+		return { id: record_Id, patient_id: responseData.patient };
 	} catch (error) {
 		console.error('Error exchanging authorization code for token:', error);
 	}
 }
 
-export async function refreshNewToken() {
-	const auth = await prisma.auth.findUnique({
-		where: { id: 1 },
+export async function refreshNewToken(patient_id) {
+	const auth = await prisma.auth.findMany({
+		where: { patient_id: patient_id },
 		select: { token_url: true, refresh_token: true }
 	});
-	const token_url = auth?.token_url;
-	const refresh_token = auth?.refresh_token;
+	const token_url = auth[0].token_url;
+	const refresh_token = auth[0].refresh_token;
 	if (token_url && refresh_token) {
 		//fetch new token
 		const form = new URLSearchParams();
@@ -232,31 +200,32 @@ export async function refreshNewToken() {
 				throw new Error('Network response was not ok');
 			}
 			const responseData = await response.json();
-			await prisma.auth.update({
-				where: { id: 1 },
+			await prisma.auth.updateMany({
+				where: { patient_id: patient_id },
 				data: {
 					access_token: responseData.access_token,
 					access_token_expiredAt: tokenGeneratedAt + 15,
 					// + responseData.expires_in,
-					patient_id: responseData.patient,
+					patient_id: responseData.patient
 				} as Auth
 			});
 			return response;
 		} catch (error) {
 			// console.error('Error refreshing token:', error);
-			await prisma.auth.delete({ where: { id: 1 } });
+			await prisma.auth.deleteMany({ where: { patient_id: patient_id } });
 			throw new Error('Error refreshing token:');
 		}
 	} else {
 		//redirect to get new token
+		throw new Error('Error: No refresh token found. Please go to CERNER site');
 	}
 }
 
-export async function fetchPatient() {
+export async function fetchPatient(patient_id: string) {
 	try {
-		const auth = await prisma.auth.findUnique({
+		const auth = await prisma.auth.findMany({
 			where: {
-				id: 1
+				patient_id: patient_id
 			},
 			select: {
 				access_token: true,
@@ -264,10 +233,10 @@ export async function fetchPatient() {
 				patient_id: true
 			}
 		});
-		const response = await fetch(`${auth?.fhir_endpoint}/Patient/${auth?.patient_id}`, {
+		const response = await fetch(`${auth[0].fhir_endpoint}/Patient/${auth[0].patient_id}`, {
 			method: 'GET',
 			headers: {
-				Authorization: `Bearer ${auth?.access_token}`,
+				Authorization: `Bearer ${auth[0].access_token}`,
 				Accept: 'application/json'
 			}
 		});
@@ -275,6 +244,14 @@ export async function fetchPatient() {
 			redirect(302, '/refreshtoken');
 		}
 		const patient = await response.json();
+		// console.log('fetchPatient:', patient);
+		await prisma.auth.updateMany({
+			where: { patient_id: patient_id },
+			data: { Name: patient?.name?.[0]?.text,
+				DOB: patient?.birthDate,
+				Sex: patient?.gender
+			}
+		});
 		const patientData = {
 			name: patient?.name?.[0]?.text || '',
 			birthDate: patient?.birthDate || '',
@@ -288,57 +265,82 @@ export async function fetchPatient() {
 		return appBarContent;
 	} catch (error) {
 		console.error('Error fetching patient:', error);
-		//direct to refreshToken() to get new token
 		redirect(302, '/refreshtoken');
 	}
 }
 
-export async function getNewToken(url) {
+export async function getNewToken(url, cookies) {
 	const iss = url.searchParams.get('iss') || '';
 	const launch = url.searchParams.get('launch') || '';
 	const code = url.searchParams.get('code') || '';
 	if (iss) {
-		await createFhirEndpoint(iss, launch);
-		await getAuthTokenUrl(iss);
-		const redirectUrl = await getAuthRedirect();
+		const recordID = await createFhirEndpoint(iss, launch);
+		console.log('recordId:', recordID);
+		await getAuthTokenUrl(iss, recordID);
+		const redirectUrl = await getAuthRedirect(recordID);
 		redirect(302, redirectUrl);
 	}
 	if (code) {
-		await createCode(code);
+		const latestQuery = await prisma.auth.findMany({
+			orderBy: {
+				createdAt: 'desc'
+			},
+			take: 1
+		});
+		const recordID = latestQuery[0].id;
+		await createCode(code, recordID);
 		const auth = await prisma.auth.findUnique({
-			where: { id: 1 },
+			where: { id: recordID },
 			select: { token_url: true, code_verifier: true }
 		});
 		const token_url = auth?.token_url;
 		const code_verifier = auth?.code_verifier;
-		await exchangeAuthorizationCodeForToken(code, code_verifier, token_url);
-		const data = await prisma.auth.findUnique({
-			where: { id: 1 },
-			select: { access_token: true, access_token_expiredAt: true }
+		const record = await exchangeAuthorizationCodeForToken(
+			code,
+			code_verifier,
+			token_url,
+			recordID
+		);
+		console.log(`latest record_id: ${record?.id} patient_id: ${record?.patient_id}`);
+		const deleteResponse = await prisma.auth.deleteMany({
+			where: {
+				patient_id: record?.patient_id,
+				id: {
+					not: record?.id
+				}
+			}
 		});
+		console.log('patient auth deleted:', deleteResponse.count);
+		cookies.set(
+			'patient_id',
+			record?.patient_id,
+			{
+				path: '/',
+				httpOnly: false
+			}
+		);
 		console.log('ready to fetch patient');
 	}
 }
 
-export async function getExpiredToken() {
-	const auth = await prisma.auth.findUnique({
-		where: { id: 1 },
+export async function getExpiredToken(patient_id: string) {
+	const auth = await prisma.auth.findMany({
+		where: { patient_id: patient_id },
 		select: { access_token_expiredAt: true }
 	});
 	const now = Math.round(new Date().getTime() / 1000);
-	const access_token_expiredAt = auth?.access_token_expiredAt;
-	return { now:now, access_token_expiredAt:access_token_expiredAt };
+	const access_token_expiredAt = auth?.[0]?.access_token_expiredAt;
+	return { now: now, access_token_expiredAt: access_token_expiredAt };
 }
 
-export async function getNeedBanner() {
-	const auth = await prisma.auth.findUnique({
-		where: { id: 1 },
+export async function getNeedBanner(patient_id: string) {
+	const auth = await prisma.auth.findMany({
+		where: { patient_id: patient_id },
 		select: { need_patient_banner: true }
 	});
-	const need_patient_banner = auth?.need_patient_banner;
+	const need_patient_banner = auth[0].need_patient_banner;
 	return need_patient_banner;
 }
-
 
 // export async function findPrismaData(table: string,column: string, value: string) {
 // 	let exists = await prisma[table].count({
@@ -349,18 +351,17 @@ export async function getNeedBanner() {
 // 	return exists;
 // }
 
-
 interface PrismaTables {
 	[key: string]: {
-	  count: (args: { where: { [key: string]: any } }) => Promise<number>;
+		count: (args: { where: { [key: string]: any } }) => Promise<number>;
 	};
-  }
-  
-  export async function findPrismaData(table: keyof PrismaTables, column: string, value: string) {
+}
+
+export async function findPrismaData(table: keyof PrismaTables, column: string, value: string) {
 	let exists = await (prisma as unknown as PrismaTables)[table].count({
-	  where: {
-		[column]: value,
-	  },
+		where: {
+			[column]: value
+		}
 	});
 	return exists;
-  }
+}
